@@ -1,0 +1,97 @@
+
+CLASS zcl_2123_cc DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+
+    INTERFACES if_rap_query_provider .
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+ENDCLASS.
+
+
+CLASS zcl_2123_cc IMPLEMENTATION.
+
+
+  METHOD if_rap_query_provider~select.
+
+    DATA: lt_cc         TYPE TABLE OF zce_2123_cc,
+          lt_final_data TYPE TABLE OF zce_2123_cc.
+    DATA(lv_top)     = io_request->get_paging( )->get_page_size( ).
+    DATA(lv_skip)    = io_request->get_paging( )->get_offset( ).
+    DATA(requested_fields)  = io_request->get_requested_elements( ).
+
+    DATA(lt_sort) = io_request->get_sort_elements( ).
+
+    DATA(lt_sort_criteria) = VALUE string_table( FOR sort_element IN lt_sort
+                                                ( |{ sort_element-element_name } { COND #( WHEN sort_element-descending = abap_true
+                                                                                            THEN 'DESCENDING'
+                                                                                            ELSE 'ASCENDING' ) } |
+                                               )
+                                               ).
+    DATA(lv_orderby) = COND #( WHEN lt_sort_criteria IS NOT INITIAL THEN concat_lines_of( table = lt_sort_criteria sep = ',' ) ).
+    IF lv_orderby IS INITIAL.
+      lv_orderby = 'COSTCENTER'.
+    ENDIF.
+
+
+    TRY.
+        DATA(lt_filter_cond) = io_request->get_filter( )->get_as_ranges( ).
+      CATCH cx_rap_query_filter_no_range.
+    ENDTRY.
+
+
+    DATA(sel_co_area)     = VALUE #( lt_filter_cond[ name = 'CONTROLLINGAREA' ]-range OPTIONAL ).
+
+
+    SELECT FROM I_CostCenter
+    FIELDS CostCenter ,CompanyCode , ControllingArea ,ValidityEndDate ,
+           ValidityStartDate, CostCenterCategory, CostCtrResponsiblePersonName,CostCtrResponsibleUser
+    WHERE ControllingArea IN @sel_co_area
+    INTO CORRESPONDING FIELDS OF TABLE @lt_cc .
+
+    IF lv_top  GT 0.
+      APPEND LINES OF lt_cc FROM lv_skip + 1 TO lv_top + lv_skip TO lt_final_data .
+    ELSE.
+      APPEND LINES OF lt_cc TO lt_final_data.
+    ENDIF.
+
+    ##ITAB_KEY_IN_SELECT
+    SELECT * FROM @lt_final_data AS final ORDER BY (lv_orderby) INTO TABLE @DATA(lt_sorted_final).
+
+    IF io_request->is_total_numb_of_rec_requested( ).
+      io_response->set_total_number_of_records( lines( lt_cc ) ).
+    ENDIF.
+
+    IF io_request->is_data_requested( ).
+      io_response->set_data( lt_sorted_final ).
+    ENDIF.
+
+"Another way to write the same thing
+    SELECT FROM I_CostCenter
+        FIELDS CostCenter, CompanyCode, ControllingArea, ValidityEndDate,
+               ValidityStartDate, CostCenterCategory, CostCtrResponsiblePersonName, CostCtrResponsibleUser
+        WHERE ControllingArea IN @sel_co_area
+        ORDER BY (lv_orderby) " Mandatory for OFFSET
+        INTO CORRESPONDING FIELDS OF TABLE @lt_cc
+        UP TO @lv_top ROWS
+        OFFSET @lv_skip.
+
+    " 3. Set Total Count (if requested)
+    IF io_request->is_total_numb_of_rec_requested( ).
+      SELECT COUNT( * ) FROM I_CostCenter
+        WHERE ControllingArea IN @sel_co_area
+        INTO @DATA(lv_total_count).
+      io_response->set_total_number_of_records( lv_total_count ).
+    ENDIF.
+
+    " 4. Return Data
+    IF io_request->is_data_requested( ).
+      io_response->set_data( lt_cc ).
+    ENDIF.
+
+
+  ENDMETHOD.
+ENDCLASS.

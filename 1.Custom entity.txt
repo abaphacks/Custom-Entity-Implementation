@@ -1,0 +1,35 @@
+@EndUserText.label: 'Cc custom entity'
+@ObjectModel.query.implementedBy: 'ABAP:ZCL_2123_CC'
+@UI.headerInfo: {
+    typeName: 'Cost Center',
+    typeNamePlural: 'Cost Centers'
+}
+define custom entity ZCE_2123_CC
+{
+      @UI.lineItem                 : [{ position: 10 }]
+      @EndUserText.label           : 'Cost Center'
+  key CostCenter                   : abap.char(10);
+      @UI.lineItem                 : [{ position: 20 }]
+      @UI.selectionField           : [{ position: 10 }]
+      @Consumption.filter.mandatory: true
+      @EndUserText.label           : 'CO Area'
+  key ControllingArea              : abap.char(10);
+      @UI.lineItem                 : [{ position: 30 }]
+      @EndUserText.label           : 'Valid To'
+  key ValidityEndDate              : abap.dats;
+      @UI.lineItem                 : [{ position: 40 }]
+      @EndUserText.label           : 'Valid From'
+      ValidityStartDate            : abap.dats;
+      @UI.lineItem                 : [{ position: 50 }]
+      @EndUserText.label           : 'Cost Center Type'
+      CostCenterCategory           : abap.char(1);
+      @UI.lineItem                 : [{ position: 60 }]
+      @EndUserText.label           : 'Company Code'
+      CompanyCode                  : abap.char(4);
+      @UI.lineItem                 : [{ position: 70 }]
+      @EndUserText.label           : 'Person Responsible'
+      CostCtrResponsiblePersonName : abap.char(12);
+      @UI.lineItem                 : [{ position:  80 }]
+      @EndUserText.label           : 'User Name'
+      CostCtrResponsibleUser       : abap.char(20);
+}
